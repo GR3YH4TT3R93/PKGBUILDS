@@ -1,0 +1,75 @@
+# Maintainer: GR3YH4TT3R93 <gr3yh4tt3r1@gmail.com>
+pkgname=rofi-rbw-rs-git
+_reponame=rofi-rbw-rs
+pkgver=r4.fee8a90
+pkgrel=1
+pkgdesc='Rust frontend for rbw (Bitwarden CLI) with rofi/wofi/fuzzel/bemenu support'
+arch=('x86_64')
+url='https://git.ourserver.fun/GR3YH4TT3R93/rofi-rbw-rs'
+license=('MIT')
+depends=('glibc' 'gcc-libs' 'rbw')
+makedepends=('cargo' 'rust')
+optdepends=(
+    # Selectors (pick at least one)
+    'rofi: X11/Wayland dmenu frontend'
+    'wofi: Wayland-native selector'
+    'fuzzel: Wayland-native selector'
+    'bemenu: Wayland/X11 selector'
+    # Typers (pick at least one)
+    'wtype: Wayland typing via virtual keyboard'
+    'ydotool: Wayland/X11 typing via uinput'
+    'dotool: Wayland typing (AUR)'
+    'xdotool: X11 typing'
+    # Clipboarders (pick at least one)
+    'wl-clipboard: Wayland clipboard (wl-copy)'
+    'xclip: X11 clipboard'
+    'xsel: X11 clipboard'
+    # Pinentry integration
+    'libsecret: keyring-backed pinentry via secret-tool'
+    'pinentry: interactive password prompt fallback'
+)
+provides=('rofi-rbw-rs')
+conflicts=('rofi-rbw-rs' 'rofi-rbw-rs-bin')
+source=("git+https://git.ourserver.fun/GR3YH4TT3R93/${_reponame}.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$_reponame"
+    local desc
+    if desc=$(git describe --tags --long 2>/dev/null); then
+        printf '%s' "$desc" | sed 's/^v//; s/-/+/; s/-/./'
+    else
+        printf 'r%s.%s' \
+            "$(git rev-list --count HEAD)" \
+            "$(git rev-parse --short HEAD)"
+    fi
+}
+
+prepare() {
+    cd "$_reponame"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's|host: ||p')"
+}
+
+build() {
+    cd "$_reponame"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    cargo build --frozen --release --all-features
+}
+
+check() {
+    cd "$_reponame"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    cargo test --frozen --release
+}
+
+package() {
+    cd "$_reponame"
+
+    install -Dm755 "target/release/${_reponame}" \
+        "${pkgdir}/usr/bin/${_reponame}"
+
+    install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
